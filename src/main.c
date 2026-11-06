@@ -1,59 +1,150 @@
 #include <stdio.h>
-#include <math.h>
-#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
 
-typedef struct {
-	float x;
-	float y;
-} Point;
+#define MAX_ROWS 1024 // adjust as needed. The csv is 815x5
+#define NUM_FEATURES 5
 
-float barycenter(float* x, size_t n);
-bool barycenterCriteria(Point x, Point z1, Point z2);
+void compute_barycenter(size_t features, size_t rows, float *X, float *out_barycenter);
 
-int main() {
-	//sample usage
-	float y[3] = {1.0, 2.0, 3.5};
-	printf("barycenter calculation for y data points = %f\n", barycenterCalculation(y,3));
+int main()
+{
+	// STEP 0: Initialize memory space for classes w/ features x1-x5 as rows
+	float *X_classNeg1 = malloc(MAX_ROWS * NUM_FEATURES * sizeof(float));
+	float *X_class1 = malloc(MAX_ROWS * NUM_FEATURES * sizeof(float));
 
-	Point x = {1,0};
-	Point z1 = {3,0};
-	Point z2 = {4,0};
-	if(barycenterCriteria(x,z1,z2))
-		printf("passes the criteria!\n");	
-}
-
-/**
- * @brief Calculates the barycenter (arithmetic mean) of a set of values.
- *
- * @param x Pointer to an array of floating-point values.
- * @param n Number of elements in the array.
- * @return The arithmetic mean of the values.
- */
-float barycenter(float* x, size_t n) {
-	float sum = 0;
-	for(int i=0; i < n; i++) { 
-		sum += x[i];
+	// STEP 1: Read from csv
+	FILE *file = fopen("../data.csv", "r");
+	if (!file)
+	{
+		// Clean up before exiting
+		free(X_classNeg1);
+		free(X_class1);
+		return 1; // indicate error
 	}
-	return sum * (1/(n*1.0f));
+
+	char line[MAX_ROWS];
+	// skip header by reading first line
+	fgets(line, sizeof(line), file);
+
+	// size_t row = 0;
+	int count_neg1 = 0; // # of rows where y == -1
+	int count_1 = 0;	// # of rows where y == 1
+
+	while (fgets(line, sizeof(line), file))
+	{
+		// remove trailing \n
+		line[strcspn(line, "\r\n")] = 0;
+
+		// to store unclassified rows
+		float temp_features[NUM_FEATURES];
+
+		int label = -1;
+		size_t featureCol = 0;
+
+		char *token = strtok(line, ","); // Get first token @ featureCol 0
+		while (token != NULL)
+		{
+			if (featureCol < NUM_FEATURES)
+			{
+				// store all unclassified rows
+				temp_features[featureCol] = (float)atof(token);
+			}
+			else if (featureCol == NUM_FEATURES)
+			{
+				label = atoi(token); // 6th column is y
+			}
+			token = strtok(NULL, ","); // move to next row
+			featureCol++;
+		}
+
+		// move row into class
+		if (label == -1)
+		{
+			for (int j = 0; j < NUM_FEATURES; j++)
+			{
+				X_classNeg1[count_neg1 * NUM_FEATURES + j] = temp_features[j];
+			}
+			count_neg1++;
+		}
+		else if (label == 1)
+		{
+			for (int j = 0; j < NUM_FEATURES; j++)
+			{
+				X_class1[count_1 * NUM_FEATURES + j] = temp_features[j];
+			}
+			count_1++;
+		}
+	}
+	fclose(file);
+
+	// Correctness check of data extraction
+	printf("======== DATA EXTRACTION PREVIEW ========\n");
+	printf("Extracted %d samples for Class 0\n", count_neg1);
+	printf("Extracted %d samples for Class 1\n", count_1);
+	printf("CLASS -1 (First 5 rows):\n");
+	for (size_t i = 0; i < 5; i++)
+	{
+		// [i * NUM_FEATURES + col]
+		printf("Row %zu: x1 = %.2f, x2 = %.2f\n",
+			   i,
+			   X_classNeg1[i * NUM_FEATURES + 0],
+			   X_classNeg1[i * NUM_FEATURES + 1]);
+	}
+	printf("\nCLASS 1 (First 5 rows):\n");
+	for (size_t i = 0; i < 5; i++)
+	{
+		// [i * NUM_FEATURES + col]
+		printf("Row %zu: x1 = %.2f, x2 = %.2f\n",
+			   i,
+			   X_class1[i * NUM_FEATURES + 0],
+			   X_class1[i * NUM_FEATURES + 1]);
+	}
+
+	// Example barycenter calculation for both classes
+	float z_B_neg1[NUM_FEATURES];
+	float z_B_pos1[NUM_FEATURES];
+
+	if (count_neg1 > 0)
+	{
+		compute_barycenter(NUM_FEATURES, count_neg1, X_classNeg1, z_B_neg1);
+		printf("\nBarycenter Vector (Class -1):\n[ ");
+		for (size_t i = 0; i < NUM_FEATURES; i++)
+		{
+			printf("%.4f ", z_B_neg1[i]);
+		}
+		printf("]\n");
+	}
+
+	if (count_1 > 0)
+	{
+		compute_barycenter(NUM_FEATURES, count_1, X_class1, z_B_pos1);
+		printf("\nBarycenter Vector (Class 1):\n[ ");
+		for (size_t i = 0; i < NUM_FEATURES; i++)
+		{
+			printf("%.4f ", z_B_pos1[i]);
+		}
+		printf("]\n");
+	}
+
+	// STEP #: Free heap memory
+	free(X_classNeg1);
+	free(X_class1);
+
+	return 0;
 }
 
-/**
- * @brief Evaluates whether a point satisfies the barycenter filtering criterion.
- *
- * Compares the Euclidean distance between point x and its
- * original class barycenter z1 against the distance between
- * the two class barycenters z1 and z2.
- *
- * @param x  Point being evaluated.
- * @param z1 Barycenter of the original class.
- * @param z2 Barycenter of the other class.
- * @return true if distance(x, z1) > distance(z1, z2);
- *         false otherwise.
- */
-bool barycenterCriteria(Point x, Point z1, Point z2) {
-	float pointAgainstCluster = sqrt(pow((x.x-z1.x),2)+pow((x.y-z1.y),2));
-	float clusterAgainstCluster = sqrt(pow((z1.x-z2.x),2)+pow((z1.y-z2.y),2)); 
-	if(pointAgainstCluster > clusterAgainstCluster)	
-		return true;
-	return false;
+// returns a barycenter (5D vector) of a single datacluster/class
+void compute_barycenter(size_t features, size_t rows, float *X, float *out_barycenter)
+{
+	for (size_t i = 0; i < features; i++)
+	{
+		float featureSum = 0.0f;
+		for (size_t j = 0; j < rows; j++)
+		{
+			// compute sum of feature
+			featureSum += X[j * features + i];
+		}
+		out_barycenter[i] = featureSum / (float)rows;
+	}
 }
