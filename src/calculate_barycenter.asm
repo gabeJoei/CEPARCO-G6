@@ -16,7 +16,7 @@ calculate_barycenter:
     jz .break
     
     xor r11, r11        ; clear register r11 to be used for row index.
-    vpxor ymm4, ymm4    ; clear register xmm4 to be used for caclulating mean.
+    vpxor ymm4, ymm4    ; clear register ymm4 to be used for caclulating mean.
 
     ; RECALL: YMM takes in 8 floats so we have 0 extra floats that we dont want
     vmovdqa ymm2, [mask5]   ; we create 5 element mask into ymm2 so we can mask the 8 elements later on
