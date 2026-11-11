@@ -128,6 +128,29 @@ int main()
 		printf("]\n");
 	}
 
+	// STEP 3: Apply C Barycenter Criteria
+	float *filtered_neg1 = malloc(count_neg1 * NUM_FEATURES * sizeof(float));
+	float *filtered_pos1 = malloc(count_1 * NUM_FEATURES * sizeof(float));
+
+	if (filtered_neg1 == NULL || filtered_pos1 == NULL) {
+		fprintf(stderr, "Memory allocation failed.\n");
+		free(filtered_neg1);
+		free(filtered_pos1);
+		free(X_classNeg1);
+		free(X_class1);
+		return 1;
+	}
+
+	size_t retained_neg1 = calculate_barycenter_criteria_c(NUM_FEATURES, count_neg1, X_classNeg1, z_B_neg1, z_B_pos1, filtered_neg1);
+	size_t retained_pos1 = calculate_barycenter_criteria_c(NUM_FEATURES, count_1, X_class1, z_B_pos1, z_B_neg1, filtered_pos1);
+
+	printf("\n======== BARYCENTER CRITERIA RESULTS ========\n");
+	printf("Class -1: %zu / %d retained\n", retained_neg1, count_neg1);
+	printf("Class  1: %zu / %d retained\n", retained_pos1, count_1);
+
+	free(filtered_neg1);
+	free(filtered_pos1);
+
 	// STEP #: Free heap memory
 	free(X_classNeg1);
 	free(X_class1);

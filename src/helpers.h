@@ -1,4 +1,12 @@
 
+size_t calculate_barycenter_criteria_c(
+    size_t features,
+    size_t rows,
+    float *X,
+    float *own_barycenter,
+    float *opposite_barycenter,
+    float *filtered
+);
 
 // returns a barycenter (5D vector) of a single datacluster/class
 void compute_barycenter(size_t features, size_t rows, float *X, float *out_barycenter)
