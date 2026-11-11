@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "helpers.h"
 
 #define MAX_ROWS 1024 // adjust as needed. The csv is 815x5
 #define NUM_FEATURES 5
 
 void compute_barycenter(size_t features, size_t rows, float *X, float *out_barycenter);
+void calculate_barycenter(size_t features, size_t rows, float *X, float *out_barycenter);
 
 int main()
 {
@@ -27,7 +29,6 @@ int main()
 	// skip header by reading first line
 	fgets(line, sizeof(line), file);
 
-	// size_t row = 0;
 	int count_neg1 = 0; // # of rows where y == -1
 	int count_1 = 0;	// # of rows where y == 1
 
@@ -107,7 +108,7 @@ int main()
 
 	if (count_neg1 > 0)
 	{
-		compute_barycenter(NUM_FEATURES, count_neg1, X_classNeg1, z_B_neg1);
+		calculate_barycenter(NUM_FEATURES, count_neg1, X_classNeg1, z_B_neg1);
 		printf("\nBarycenter Vector (Class -1):\n[ ");
 		for (size_t i = 0; i < NUM_FEATURES; i++)
 		{
@@ -118,7 +119,7 @@ int main()
 
 	if (count_1 > 0)
 	{
-		compute_barycenter(NUM_FEATURES, count_1, X_class1, z_B_pos1);
+		calculate_barycenter(NUM_FEATURES, count_1, X_class1, z_B_pos1);
 		printf("\nBarycenter Vector (Class 1):\n[ ");
 		for (size_t i = 0; i < NUM_FEATURES; i++)
 		{
@@ -132,19 +133,4 @@ int main()
 	free(X_class1);
 
 	return 0;
-}
-
-// returns a barycenter (5D vector) of a single datacluster/class
-void compute_barycenter(size_t features, size_t rows, float *X, float *out_barycenter)
-{
-	for (size_t i = 0; i < features; i++)
-	{
-		float featureSum = 0.0f;
-		for (size_t j = 0; j < rows; j++)
-		{
-			// compute sum of feature
-			featureSum += X[j * features + i];
-		}
-		out_barycenter[i] = featureSum / (float)rows;
-	}
 }

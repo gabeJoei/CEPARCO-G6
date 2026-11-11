@@ -13,7 +13,7 @@ calculate_barycenter:
 
     ; make sure rows is not 0
     test rdx, rdx
-    jz .done
+    jz .break
     
     xor r11, r11        ; clear register r11 to be used for row index.
     vpxor ymm4, ymm4    ; clear register xmm4 to be used for caclulating mean.
@@ -24,13 +24,15 @@ calculate_barycenter:
     ; rows = RDX is the vector size. 
     ; RECALL: indexing in C is X[row * NUM_FEATURES + col]
 
-.loop_rows
+.loop_rows:
     ; move to computing mean if all features in each datapoint has been added
     cmp r11, RDX
     jae .calculate_mean
 
     ; calculate indexing offset X[row * NUM_FEATURES] since we only need datapoints
-    imul rax, r11, rcx      ; rax = r11 * rcx (row * NUM_FEATURES)
+    mov r12, r11
+    imul r12, rcx      ; rax = r11 * rcx (row * NUM_FEATURES)
+    mov rax, r12
 
     ; load ONLY 5 floats x1..x5 of current row 
     vmaskmovps ymm0, ymm2, [r8 + rax * 4] ; RECALL: 4 bytes per float
