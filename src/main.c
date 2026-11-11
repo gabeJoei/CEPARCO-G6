@@ -8,7 +8,7 @@
 
 void compute_barycenter(size_t features, size_t rows, float *X, float *out_barycenter);
 void calculate_barycenter(size_t features, size_t rows, float *X, float *out_barycenter);
-void calculate_barycenter_criteria(float *classPos1, float *classNeg1, float *X, float *filtered, size_t numFeatures, size_t rows);
+size_t calculate_barycenter_criteria(float *classPos1, float *classNeg1, float *X, float *filtered, size_t numFeatures, size_t rows);
 
 
 int main()
@@ -143,26 +143,46 @@ int main()
 		return 1;
 	}
 
-	size_t retained_neg1 = calculate_barycenter_criteria_c(NUM_FEATURES, count_neg1, X_classNeg1, z_B_neg1, z_B_pos1, filtered_neg1);
-	size_t retained_pos1 = calculate_barycenter_criteria_c(NUM_FEATURES, count_1, X_class1, z_B_pos1, z_B_neg1, filtered_pos1);
+	float *retained_neg1 = malloc(count_neg1 * sizeof(float));
+	float *retained_pos1 = malloc(count_1 * sizeof(float));
+	size_t retained_neg1_count = 0;
+	size_t retained_pos1_count = 0;
+	retained_neg1_count = calculate_barycenter_criteria(z_B_pos1, z_B_neg1, X_classNeg1, retained_neg1, NUM_FEATURES, count_neg1);
+	retained_pos1_count = calculate_barycenter_criteria(z_B_neg1, z_B_pos1, X_class1, retained_pos1, NUM_FEATURES, count_1);
 
 	if (filtered_neg1 == NULL || filtered_pos1 == NULL) {
-		fprintf(stderr, "Barycenter criteria calculation failed.\n");
-		free(filtered_neg1);
-		free(filtered_pos1);
-		free(X_classNeg1);
-		free(X_class1);
-		return 1;
-	}
+			fprintf(stderr, "Memory allocation failed.\n");
+			free(filtered_neg1);
+			free(filtered_pos1);
+			free(X_classNeg1);
+			free(X_class1);
+			return 1;
+		}
 
+	printf("\n======== BARYCENTER CRITERIA ASM RESULTS ========\n");
+	printf("Class -1: %zu / %d retained\n", retained_neg1_count, count_neg1);
+	printf("Class  1: %zu / %d retained\n", retained_pos1_count, count_1);
 
-	
+	if (filtered_neg1 == NULL || filtered_pos1 == NULL) {
+			fprintf(stderr, "Memory allocation failed.\n");
+			free(filtered_neg1);
+			free(filtered_pos1);
+			free(X_classNeg1);
+			free(X_class1);
+			return 1;
+		}
+
+	retained_neg1_count = calculate_barycenter_criteria_c(NUM_FEATURES, count_neg1, X_classNeg1, z_B_neg1, z_B_pos1, filtered_neg1);
+	retained_pos1_count = calculate_barycenter_criteria_c(NUM_FEATURES, count_1, X_class1, z_B_pos1, z_B_neg1, filtered_pos1);
+
 	printf("\n======== BARYCENTER CRITERIA RESULTS ========\n");
-	printf("Class -1: %zu / %d retained\n", retained_neg1, count_neg1);
-	printf("Class  1: %zu / %d retained\n", retained_pos1, count_1);
+	printf("Class -1: %zu / %d retained\n", retained_neg1_count, count_neg1);
+	printf("Class  1: %zu / %d retained\n", retained_pos1_count, count_1);
 
 	free(filtered_neg1);
 	free(filtered_pos1);
+	free(retained_neg1);
+	free(retained_pos1);
 
 	// STEP #: Free heap memory
 	free(X_classNeg1);

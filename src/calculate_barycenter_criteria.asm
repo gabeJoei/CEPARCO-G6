@@ -13,25 +13,24 @@ calculate_barycenter_criteria:
 
     push rbp ; create stack frame as callee
     mov rbp, rsp
-    add rbp, 8+8
 
     mov rax, rcx ; class1
     mov rax, rdx ; classNeg1
     mov rax, r8 ; *X
     mov rax, r9 ; *filtered
-    mov rax, [rbp + 32] ; numFeatures
-    mov rax, [rbp + 40] ; numRows
+    mov rax, [rbp + 48] ; numFeatures
+    mov rax, [rbp + 56] ; numRows
 
     ; make sure rows is not 0
-    test qword [rbp + 40], 0
+    cmp qword [rbp + 56], 0
     jz .break
     
     xor r11, r11   
     xor r13, r13     ; clear register r11 to be used for row index.
-    vpxor ymm7, ymm7   
-    vpxor ymm6, ymm6    
-    vpxor ymm5, ymm5
-    vpxor ymm4, ymm4
+    vpxor ymm7, ymm7, ymm7   
+    vpxor ymm6, ymm6, ymm6    
+    vpxor ymm5, ymm5, ymm5
+    vpxor ymm4, ymm4, ymm4
 
     ; RECALL: YMM takes in 8 floats so we have 0 extra floats that we dont want
     vmovdqa ymm8, [mask5]   ; we create 5 element mask into ymm1 so we can mask the 8 elements later on
@@ -43,12 +42,12 @@ calculate_barycenter_criteria:
 
 .loop_rows:
     ; move to computing mean if all features in each datapoint has been added
-    cmp r11, [rbp + 40]
+    cmp r11, [rbp + 56]
     jae .break
 
     ; calculate indexing offset X[row * NUM_FEATURES] since we only need datapoints
     mov r12, r11
-    imul r12, [rbp + 32]      ; rax = r11 * rcx (row * NUM_FEATURES)
+    imul r12, qword[rbp + 48]      ; rax = r11 * rcx (row * NUM_FEATURES)
     mov rax, r12
 
     ; load ONLY 5 floats x1..x5 of current row 
@@ -56,9 +55,9 @@ calculate_barycenter_criteria:
     ;*X
     vmaskmovps ymm0, ymm8, [r8 + rax * 4] 
     ;Class1
-    vmaskmovps ymm1, ymm8, [rcx + rax * 4] 
+    vmaskmovps ymm1, ymm8, [rcx] 
     ;classNeg1
-    vmaskmovps ymm2, ymm8, [rdx + rax * 4] 
+    vmaskmovps ymm2, ymm8, [rdx] 
 
     vcmpps ymm3,ymm1,ymm2,0
     vmovmskps eax, ymm3
@@ -107,5 +106,6 @@ calculate_barycenter_criteria:
     jmp .loop_rows
 
 .break:
+    mov rax, r13
     pop rbp
     ret
