@@ -8,8 +8,8 @@ global calculate_barycenter_criteria
 default rel
 
 calculate_barycenter_criteria:
-    ; PARAMETERS: float *class1, float *classNeg1, float *X, size_t numFeatures, float *filtered
-    ; ASSIGNEMNT: class1 (RCX), classNeg1 (RDX), *X (R8), numFeatures (R9), *filtered (rbp + 32) 
+    ; PARAMETERS: float *class1, float *classNeg1, float *X,  float *filtered, size_t numFeatures, size_t rows
+    ; ASSIGNEMNT: class1 (RCX), classNeg1 (RDX), *X (R8), *filtered (R9) , numFeatures (rbp + 32), rows (rbp +40)
 
     push rbp ; create stack frame as callee
     mov rbp, rsp
@@ -18,14 +18,16 @@ calculate_barycenter_criteria:
     mov rax, rcx ; class1
     mov rax, rdx ; classNeg1
     mov rax, r8 ; *X
-    mov rax, r9 ; numFeatures
-    mov rax, [rbp + 32] ; *filtered
+    mov rax, r9 ; *filtered
+    mov rax, [rbp + 32] ; numFeatures
+    mov rax, [rbp + 40] ; numRows
 
     ; make sure rows is not 0
-    test rdx, rdx
+    test qword [rbp + 40], 0
     jz .break
     
-    xor r11, r11        ; clear register r11 to be used for row index.
+    xor r11, r11   
+    xor r13, r13     ; clear register r11 to be used for row index.
     vpxor ymm7, ymm7   
     vpxor ymm6, ymm6    
     vpxor ymm5, ymm5
@@ -41,12 +43,12 @@ calculate_barycenter_criteria:
 
 .loop_rows:
     ; move to computing mean if all features in each datapoint has been added
-    cmp r11, rdx
+    cmp r11, [rbp + 40]
     jae .break
 
     ; calculate indexing offset X[row * NUM_FEATURES] since we only need datapoints
     mov r12, r11
-    imul r12, rcx      ; rax = r11 * rcx (row * NUM_FEATURES)
+    imul r12, [rbp + 32]      ; rax = r11 * rcx (row * NUM_FEATURES)
     mov rax, r12
 
     ; load ONLY 5 floats x1..x5 of current row 
@@ -58,7 +60,9 @@ calculate_barycenter_criteria:
     ;classNeg1
     vmaskmovps ymm2, ymm8, [rdx + rax * 4] 
 
-    cmp ymm1, ymm2
+    vcmpps ymm3,ymm1,ymm2,0
+    vmovmskps eax, ymm3
+    cmp eax, 255
     je .break
     
     ; Subtract the value of ymm0 to ymm1 vertically
@@ -66,33 +70,42 @@ calculate_barycenter_criteria:
     vsubps ymm5, ymm1, ymm2 ; || Zbi -  Zbj || = B 
 
     ; Raise ymm6 and ymm5 by 2 or multiple ymm6 and ymm5 by itself
-    mulps ymm6, ymm6 ; A * A
-    mulps ymm5, ymm5 ; B * B
+    vmulps ymm6, ymm6, ymm6 ; A * A
+    vmulps ymm5, ymm5, ymm5 ; B * B
     
+    ; Separately add elements 1-4 and 5th element because 
+    ; vhaddps can only add 128 bits instead of 256 bits
+    vextractf128 xmm0, ymm6, 1
+    vaddps xmm6, xmm6, xmm0
+    vhaddps xmm6, xmm6, xmm6 ; Summation of A element 
+    vhaddps xmm6, xmm6, xmm6 ; Summation of A element 
     
-    vaddps ymm6, ymm6, ymm6 ; Summation of A element 
-    vaddps ymm5, ymm5, ymm5 ; Summation of B element
+    vextractf128 xmm0, ymm5, 1
+    vaddps xmm5, xmm5, xmm0
+    vhaddps xmm5, xmm5, xmm5 ; Summation of B element 
+    vhaddps xmm5, xmm5, xmm5 ; Summation of B element 
     
     ; Store the sqrt value of ymm6 and ymm5 to r6 and r7 register
-    sqrtss r6, ymm6 ; Sqrt of A
-    sqrtss r5, ymm5 ; Sqrt of B
+    vsqrtss xmm6, xmm6, xmm6 ; Sqrt of A, since the value we want to sqrt is a single val
+    vsqrtss xmm5, xmm5, xmm5 ; Sqrt of B
 
     ; Main comparision, if the euclidean distance of r6 is greater than
     ; the euclidean distance of r5 then store the value else, move to the next row
-    cmp r6, r5
+    
+    comiss xmm6, xmm5
     jb .store
 
     inc r11 ; move to next rows
     jmp .loop_rows
 
-.store
+.store:
     ; Store valid data points into ymm4
-    movss [ymm4 + r11 * 4 ], r6
+    movss [r9 + r13 * 4 ], xmm6
  
     inc r11 ; move to next rows
+    inc r13
     jmp .loop_rows
 
 .break:
-    vmovups [rbp + 32], ymm4 
     pop rbp
     ret
