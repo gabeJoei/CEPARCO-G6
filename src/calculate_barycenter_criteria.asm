@@ -54,6 +54,7 @@ calculate_barycenter_criteria:
 
     ;*X
     vmaskmovps ymm0, ymm8, [r8 + rax * 4] 
+    vmovaps ymm9, ymm0
     ;Class1
     vmaskmovps ymm1, ymm8, [rcx] 
     ;classNeg1
@@ -98,8 +99,10 @@ calculate_barycenter_criteria:
     jmp .loop_rows
 
 .store:
-    ; Store valid data points into ymm4
-    movss [r9 + r13 * 4 ], xmm6
+    mov r10, r13
+    imul r10, 5
+
+    vmaskmovps [r9 + r10 * 4], ymm8, ymm9
  
     inc r11 ; move to next rows
     inc r13
