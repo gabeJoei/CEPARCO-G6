@@ -10,7 +10,7 @@ void compute_barycenter(size_t features, size_t rows, float *X, float *out_baryc
 void calculate_barycenter(size_t features, size_t rows, float *X, float *out_barycenter);
 size_t calculate_barycenter_criteria(float *classPos1, float *classNeg1, float *X, float *filtered, size_t numFeatures, size_t rows);
 
-void printCriteria(float *X){
+void printVals(float *X){
 	for (size_t i = 0; i < 5; i++)
 	{
 		printf("Row %zu: x1 = %.2f, x2 = %.2f, x3 = %.2f, x4 = %.2f, x5 = %.2f\n",
@@ -156,23 +156,9 @@ int main()
 	printf("Extracted %d samples for Class 0\n", count_neg1);
 	printf("Extracted %d samples for Class 1\n", count_1);
 	printf("CLASS -1 (First 5 rows):\n");
-	for (size_t i = 0; i < 5; i++)
-	{
-		// [i * NUM_FEATURES + col]
-		printf("Row %zu: x1 = %.2f, x2 = %.2f\n",
-			   i,
-			   X_classNeg1[i * NUM_FEATURES + 0],
-			   X_classNeg1[i * NUM_FEATURES + 1]);
-	}
+	printVals(X_classNeg1);
 	printf("\nCLASS 1 (First 5 rows):\n");
-	for (size_t i = 0; i < 5; i++)
-	{
-		// [i * NUM_FEATURES + col]
-		printf("Row %zu: x1 = %.2f, x2 = %.2f\n",
-			   i,
-			   X_class1[i * NUM_FEATURES + 0],
-			   X_class1[i * NUM_FEATURES + 1]);
-	}
+	printVals(X_class1);
 
 	// Example barycenter calculation for both classes
 	float z_B_neg1[NUM_FEATURES];
@@ -241,9 +227,9 @@ int main()
 	printf("Class  1: %zu / %d retained\n", retained_pos1_count, count_1);
 	printf("Retained Class -1 Samples:\n");
 	
-	printCriteria(filtered_neg1_asm);
+	printVals(filtered_neg1_asm);
 	printf("\nRetained Class 1 Samples:\n");
-	printCriteria(filtered_pos1_asm);
+	printVals(filtered_pos1_asm);
 
 	printf("\n======================================================\n");
 
@@ -255,9 +241,9 @@ int main()
 	printf("Class  1: %zu / %d retained\n", retained_pos1_count, count_1);
 
 	printf("Retained Class -1 Samples:\n");
-	printCriteria(filtered_neg1);
+	printVals(filtered_neg1);
 	printf("Retained Class 1 Samples:\n");
-	printCriteria(filtered_pos1);
+	printVals(filtered_pos1);
 	printf("\n======================================================\n");
 	
 	printf("\n======== COMPARISON OF RESULTS ========\n");
