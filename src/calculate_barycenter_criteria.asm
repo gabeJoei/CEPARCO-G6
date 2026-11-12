@@ -54,7 +54,7 @@ calculate_barycenter_criteria:
 
     ;*X
     vmaskmovps ymm0, ymm8, [r8 + rax * 4] 
-    vmovaps ymm9, ymm0
+  
     ;Class1
     vmaskmovps ymm1, ymm8, [rcx] 
     ;classNeg1
@@ -75,14 +75,17 @@ calculate_barycenter_criteria:
     
     ; Separately add elements 1-4 and 5th element because 
     ; vhaddps can only add 128 bits instead of 256 bits
-    vextractf128 xmm0, ymm6, 1
-    vaddps xmm6, xmm6, xmm0
-    vhaddps xmm6, xmm6, xmm6 ; Summation of A element 
+
+  
+    vextractf128 xmm7, ymm6, 1
+    vaddps xmm6, xmm6, xmm7
+    vhaddps xmm6, xmm6, xmm6 
     vhaddps xmm6, xmm6, xmm6 ; Summation of A element 
     
-    vextractf128 xmm0, ymm5, 1
-    vaddps xmm5, xmm5, xmm0
-    vhaddps xmm5, xmm5, xmm5 ; Summation of B element 
+  
+    vextractf128 xmm7, ymm5, 1
+    vaddps xmm5, xmm5, xmm7
+    vhaddps xmm5, xmm5, xmm5
     vhaddps xmm5, xmm5, xmm5 ; Summation of B element 
     
     ; Store the sqrt value of ymm6 and ymm5 to r6 and r7 register
@@ -102,7 +105,7 @@ calculate_barycenter_criteria:
     mov r10, r13
     imul r10, 5
 
-    vmaskmovps [r9 + r10 * 4], ymm8, ymm9
+    vmaskmovps [r9 + r10 * 4], ymm8, ymm0
  
     inc r11 ; move to next rows
     inc r13
